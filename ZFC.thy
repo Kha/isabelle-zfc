@@ -288,7 +288,7 @@ by (auto simp:funcs_def func'_def func_def)
 section {* Natural Numbers *}
 
 
-definition succ :: "set \<Rightarrow> set" ("(_\<^sup>+)" [1000] 999) where
+definition succ :: "set \<Rightarrow> set" ("_\<^sup>+" [1000] 999) where
   "a\<^sup>+ \<equiv> a \<union> {a}"
 
 definition zero :: set ("0") where "0 \<equiv> {}"
@@ -320,10 +320,10 @@ by (rule Intersect) (rule icanhazded)
 
 subsection {* Peano's Axioms *}
 
-lemma ax_zero: "0 \<in> \<nat>"
+lemma ax_zero[simp]: "0 \<in> \<nat>"
 by (simp add:nats Ded_def)
 
-lemma ax_succ: "n \<in> \<nat> \<Longrightarrow> n\<^sup>+ \<in> \<nat>"
+lemma ax_succ[simp]: "n \<in> \<nat> \<Longrightarrow> n\<^sup>+ \<in> \<nat>"
 by (simp add:nats Ded_def)
 
 lemma nonempty_member[simp]: "x \<noteq> {} \<longleftrightarrow> (\<exists>y. y \<in> x)"
@@ -332,7 +332,7 @@ by (rule ccontr) simp
 lemma union_nonempty[simp]: "x \<noteq> {} \<or> y \<noteq> {} \<Longrightarrow> x \<union> y \<noteq> {}"
 by auto
 
-lemma ax_succ_neq_zero: "n \<in> \<nat> \<Longrightarrow> n\<^sup>+ \<noteq> 0"
+lemma ax_succ_neq_zero[simp]: "n \<in> \<nat> \<Longrightarrow> n\<^sup>+ \<noteq> 0"
 by (simp add:succ_def zero_def)
 
 lemma ax_succ_inj:
@@ -348,10 +348,106 @@ proof-
   show ?thesis by auto
 qed
 
-definition subseteq :: "set \<Rightarrow> set \<Rightarrow> bool" ("_ \<subseteq> _" 50) where
+definition subseteq :: "set \<Rightarrow> set \<Rightarrow> bool" ("(_ \<subseteq> _)" [51,51] 50) where
   "x \<subseteq> y \<equiv> \<forall>z. z \<in> x \<longrightarrow> z \<in> y"
 
-lemma ax_trivial: "\<lbrakk>0 \<in> x; \<forall>y. y \<in> x \<longrightarrow> y\<^sup>+ \<in> x\<rbrakk> \<Longrightarrow> \<nat> \<subseteq> x"
+lemma empty_subseteq[simp]: "{} \<subseteq> x"
+by (simp add:subseteq_def)
+
+lemma singleton_subseteq[simp]: "{x} \<subseteq> y \<longleftrightarrow> x \<in> y"
+by (simp add:subseteq_def)
+
+lemma subseteq_trans[trans]: "\<lbrakk>x \<subseteq> y; y \<subseteq> z\<rbrakk> \<Longrightarrow> x \<subseteq> z"
+by (simp add:subseteq_def)
+
+lemma subseteq_member[trans]: "\<lbrakk>x \<in> y; y \<subseteq> z\<rbrakk> \<Longrightarrow> x \<in> z"
+by (simp add:subseteq_def)
+
+lemma subseteqI[intro]: "(\<And>z. z \<in> x \<Longrightarrow> z \<in> y) \<Longrightarrow> x \<subseteq> y"
+by (simp add:subseteq_def)
+
+lemma subseteq_unionI[intro!]: "x \<subseteq> y \<or> x \<subseteq> z \<Longrightarrow> x \<subseteq> y \<union> z"
+by (auto simp add:subseteq_def)
+
+lemma union_subseteqI[simp]: "x \<union> y \<subseteq> z \<longleftrightarrow> x \<subseteq> z \<and> y \<subseteq> z"
+by (auto simp add:subseteq_def)
+
+lemma ax_induct: "\<lbrakk>0 \<in> x; \<And>y. y \<in> x \<Longrightarrow> y\<^sup>+ \<in> x\<rbrakk> \<Longrightarrow> \<nat> \<subseteq> x"
 by (simp add:subseteq_def nats Ded_def)
+
+subsection {* Set Theoretic Properties of \<nat> *}
+
+lemma[simp]: "0 \<in> 0\<^sup>+"
+by (simp add:succ_def)
+
+lemma[simp]: "0 \<in> y \<Longrightarrow> 0 \<in> y\<^sup>+"
+by (simp add:succ_def)
+
+lemma
+  assumes "n \<in> \<nat>" "n \<noteq> 0"
+  shows "0 \<in> n"
+proof-
+  let ?x = "{n \<in> \<nat>. 0 \<in> n} \<union> {0}"
+  note assms(1)
+  also
+  have "\<nat> \<subseteq> ?x" by (rule ax_induct) auto
+  finally have "n \<in> ?x" .
+  with assms(2) show ?thesis by auto
+qed
+
+lemma nat_induct(*[induct]*):
+  assumes "n \<in> \<nat>"
+  and "P 0" "\<And>n. \<lbrakk>n \<in> \<nat>; P n\<rbrakk> \<Longrightarrow> P (n\<^sup>+)"
+  shows "P n"
+proof-
+  let ?x = "{n \<in> \<nat>. P n}"
+  note `n \<in> \<nat>`
+  also have "\<nat> \<subseteq> ?x" by (rule ax_induct, simp_all add:assms(2,3))
+  finally have "n \<in> ?x" .
+  thus "P n" by simp
+qed
+
+subsection {* Transitive Sets *}
+
+definition "trans a \<equiv> \<forall>x. x \<in> a \<longrightarrow> x \<subseteq> a"
+
+lemma trans': "trans a \<longleftrightarrow> (\<forall>x y. x \<in> a \<and> y \<in> x \<longrightarrow> y \<in> a)"
+by (auto simp add:trans_def subseteq_member)
+
+lemma succ_subseteq[simp]: "n \<subseteq> n\<^sup>+"
+by (auto simp add:succ_def)
+
+lemma "n \<in> \<nat> \<Longrightarrow> trans n"
+proof (erule nat_induct)
+  show "trans 0" by (simp add:zero_def trans_def)
+  fix n
+  assume "n \<in> \<nat>" "trans n"
+  show "trans (n\<^sup>+)"
+  unfolding trans_def
+  proof (rule, rule)
+    fix x
+    assume "x \<in> n\<^sup>+"
+    show "x \<subseteq> n\<^sup>+"
+    proof (cases "x \<in> n")
+      case True
+      with `trans n` have "x \<subseteq> n" by (simp add:trans_def)
+      also have "n \<subseteq> n\<^sup>+" by simp
+      finally show ?thesis .
+    next
+      case False
+      with `x \<in> n\<^sup>+` have "x = n" by (simp add:succ_def)
+      thus ?thesis by (auto simp add:succ_def)
+    qed
+  qed
+qed
+
+lemma "trans \<nat>"
+unfolding trans_def
+proof (rule, rule)
+  fix n
+  assume "n \<in> \<nat>"
+  thus "n \<subseteq> \<nat>"
+  by (rule nat_induct) (simp_all add:zero_def succ_def)
+qed
 
 end
