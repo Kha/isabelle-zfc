@@ -172,6 +172,12 @@ proof (rule exAxiomD2[of "\<lambda>z. \<forall>u. P u \<longrightarrow> z \<in> 
   thus "\<exists>y. \<forall>x. x \<in> y \<longleftrightarrow> (\<forall>u. P u \<longrightarrow> x \<in> u)"..
 qed
 
+definition Union :: "set \<Rightarrow> set" ("\<Union>_" [1000] 999) where
+  "\<Union>a \<equiv> THE y. \<forall>z. z \<in> y \<longleftrightarrow> (\<exists>u. z \<in> u \<and> u \<in> a)"
+
+lemma Union[simp]: "z \<in> \<Union>a \<longleftrightarrow> (\<exists>u. z \<in> u \<and> u \<in> a)"
+by (rule exAxiomD2[of "\<lambda>z. \<exists>u. z \<in> u \<and> u \<in> a", simplified, folded Union_def]) (rule sum_set)
+
 section {* Ordered Pairs *}
 
 definition ordered_pair :: "set \<Rightarrow> set \<Rightarrow> set" ("\<langle>_,_\<rangle>") where
@@ -297,7 +303,6 @@ definition "Ded a \<equiv> 0 \<in> a \<and> (\<forall>x. x \<in> a \<longrightar
 
 lemma icanhazded: "\<exists>a. Ded a"
 proof-
-  thm infinity
   from infinity obtain a where inf: "{} \<in> a"
     "\<forall>x. x \<in> a \<longrightarrow> (\<exists>z. z \<in> a \<and> (\<forall>u. (u \<in> z) = (u \<in> x \<or> u = x)))" by auto
   have "\<forall>x. x \<in> a \<longrightarrow> x\<^sup>+ \<in> a"
@@ -395,7 +400,7 @@ proof-
   with assms(2) show ?thesis by auto
 qed
 
-lemma nat_induct(*[induct]*):
+lemma nat_induct(*[induct]*)[case_names Zero Succ[hyps IH], consumes 1]:
   assumes "n \<in> \<nat>"
   and "P 0" "\<And>n. \<lbrakk>n \<in> \<nat>; P n\<rbrakk> \<Longrightarrow> P (n\<^sup>+)"
   shows "P n"
@@ -417,25 +422,37 @@ by (auto simp add:trans_def subseteq_member)
 lemma succ_subseteq[simp]: "n \<subseteq> n\<^sup>+"
 by (auto simp add:succ_def)
 
+lemma succE:
+  assumes "n \<in> m\<^sup>+"
+  obtains "n \<in> m" | "n = m"
+proof (cases "n \<in> m")
+  case False
+  assume "n = m \<Longrightarrow> thesis"
+  with False assms(1) show thesis by (simp add:succ_def)
+qed simp
+
+lemma[simp]: "n \<notin> 0"
+by (simp add:zero_def)
+
 lemma "n \<in> \<nat> \<Longrightarrow> trans n"
-proof (erule nat_induct)
-  show "trans 0" by (simp add:zero_def trans_def)
-  fix n
-  assume "n \<in> \<nat>" "trans n"
-  show "trans (n\<^sup>+)"
+proof (induct rule:nat_induct)
+  case Zero
+  show ?case by (simp add:trans_def)
+next
+  case (Succ n)
+  show ?case
   unfolding trans_def
   proof (rule, rule)
     fix x
     assume "x \<in> n\<^sup>+"
-    show "x \<subseteq> n\<^sup>+"
-    proof (cases "x \<in> n")
-      case True
+    thus "x \<subseteq> n\<^sup>+"
+    proof (cases x n rule:succE)
+      case 1
       with `trans n` have "x \<subseteq> n" by (simp add:trans_def)
       also have "n \<subseteq> n\<^sup>+" by simp
       finally show ?thesis .
     next
-      case False
-      with `x \<in> n\<^sup>+` have "x = n" by (simp add:succ_def)
+      case 2
       thus ?thesis by (auto simp add:succ_def)
     qed
   qed
@@ -450,4 +467,128 @@ proof (rule, rule)
   by (rule nat_induct) (simp_all add:zero_def succ_def)
 qed
 
+subsection {* The order relation on \<nat> *}
+
+definition "trans_rel r \<equiv> \<forall>x y z. \<langle>x,y\<rangle> \<in> r \<and> \<langle>y,z\<rangle> \<in> r \<longrightarrow> \<langle>x,z\<rangle> \<in> r"
+
+lemma trans_relD:
+  assumes "trans_rel r" "\<langle>x,y\<rangle> \<in> r" "\<langle>y,z\<rangle> \<in> r"
+  shows "\<langle>x,z\<rangle> \<in> r"
+proof-
+  from assms(1) have "\<langle>x,y\<rangle> \<in> r \<and> \<langle>y,z\<rangle> \<in> r \<longrightarrow> \<langle>x,z\<rangle> \<in> r"
+    unfolding trans_rel_def
+    by -(erule allE)+
+  with assms(2,3) show ?thesis by simp
+qed
+
+lemma
+  assumes "trans_rel r" "\<And>n. \<langle>n,n\<^sup>+\<rangle> \<in> r" "m \<in> \<nat>"
+  shows "n \<in> m \<longrightarrow> \<langle>n,m\<rangle> \<in> r"
+using assms(3) proof (induct m rule:nat_induct)
+  case (Succ m)
+  show ?case
+  proof
+    assume "n \<in> m\<^sup>+"
+    thus "\<langle>n,m\<^sup>+\<rangle> \<in> r"
+    proof (cases n m rule:succE)
+      case 1
+      show ?thesis proof (rule trans_relD[OF assms(1)])
+        from 1 show "\<langle>n,m\<rangle> \<in> r" by (rule Succ.IH[THEN mp])
+        show "\<langle>m,m\<^sup>+\<rangle> \<in> r" by (rule assms(2))
+      qed
+    qed (simp add:assms(2))
+  qed
+qed simp
+
+subsection {* Set Theoretic Properties of \<nat> (II) *}
+
+definition less ("_ < _" [51, 51] 50) where "n < m \<equiv> n \<in> m"
+
+lemma trans_nat: "\<lbrakk>n \<in> \<nat>; m \<in> n\<rbrakk> \<Longrightarrow> m \<in> \<nat>"
+proof (induct rule:nat_induct)
+  case (Succ n)
+  from this(3) show ?case by (cases m n rule:succE) (auto intro:Succ)
+qed simp
+
+lemma "n \<in> \<nat> \<Longrightarrow> n = {m \<in> \<nat> . m < n}"
+unfolding less_def
+by (rule extensionality) (auto intro:trans_nat)
+
+
+subsection {* The Recursion Theorem *}
+
+definition "dom f \<equiv> {x \<in> \<Union>f . \<exists>y. \<langle>x,y\<rangle> \<in> f}"
+
+lemma[simp]:
+  assumes "func' f a b" "\<langle>x,y\<rangle> \<in> f"
+  shows "x \<in> a" "y \<in> b"
+using assms unfolding func'_def rel''_def by auto
+
+definition appl :: "set \<Rightarrow> set \<Rightarrow> set" ("_[_]" [101,0] 100) where
+  "f[x] \<equiv> THE y. \<langle>x,y\<rangle> \<in> f"
+
+definition "empty_fun \<equiv> {}"
+
+lemma[simp]: "func' empty_fun {} {}"
+unfolding empty_fun_def func'_def func_def rel_def rel''_def
+by simp
+
+definition fun_ext :: "set \<Rightarrow> set \<Rightarrow> set \<Rightarrow> set" ("_[_:=_]" [101,0,0] 100) where
+  "f[x:=y] \<equiv> f \<union> {\<langle>x,y\<rangle>}"
+
+lemma rel_ext: "rel'' r a b \<Longrightarrow> rel'' (r \<union> {\<langle>x,y\<rangle>}) (a \<union> {x}) (b \<union> {y})"
+unfolding rel''_def rel_def by simp
+
+lemma[simp]: "rel'' r a b \<Longrightarrow> rel r"
+unfolding rel''_def by simp
+
+lemma fun_ext:
+  assumes "func' f a b" "x \<notin> a"
+  shows "func' (f[x:=y]) (a \<union> {x}) (b \<union> {y})"
+using assms unfolding func'_def fun_ext_def func_def
+apply (auto elim:rel_ext)
+lemmas ext = extensionality[rule_format]
+
+lemma dom_unionI: "\<exists>f. f \<in> F \<and> x \<in> dom f \<Longrightarrow> x \<in> dom (\<Union>F)"
+unfolding dom_def by auto
+
+abbreviation one :: set ("1") where "1 \<equiv> 0\<^sup>+"
+
+lemma nat1_induct[case_names One Succ[hyps IH], consumes 2]:
+  assumes "n \<in> \<nat>" "n \<noteq> 0"
+  and "P 1" "\<And>n. \<lbrakk>n \<in> \<nat>; n \<noteq> 0; P n\<rbrakk> \<Longrightarrow> P (n\<^sup>+)"
+  shows "P n"
+using assms(1,2) proof (induction n rule:nat_induct)
+  case (Succ n)
+  show ?case
+  proof (cases "n = 0")
+    case False
+    hence "P n" by (rule Succ.IH)
+    with Succ.hyps(1) False show ?thesis by (rule assms(4))
+  qed (simp add:assms(3))
+qed simp
+
+lemma rec_aux:
+  assumes "n \<in> \<nat>" "n \<noteq> 0"
+  shows "\<exists>h. h \<in> funcs n (ran F) \<and> f[0] = u \<and> (\<forall>m. m\<^sup>+ \<in> n \<longrightarrow> h[m\<^sup>+] = F[h[m]])"
+using assms proof (induction n rule:nat1_induct)
+  
+theorem rec:
+  assumes "ran F \<subseteq> dom F" "u \<in> dom F"
+  shows "\<exists>! f. dom f = \<nat> \<and> f[0] = u \<and> (\<forall>n. f[n\<^sup>+] = F[f[n]])"
+proof (rule ex_ex1I)
+  let ?H = "{ h \<in> funcs \<nat> (ran F) . h[0] = u \<and> (\<exists>n. n \<noteq> 0 \<and> dom h = n \<and> (\<forall>m. m\<^sup>+ \<in> n \<longrightarrow> h[m\<^sup>+] = F[h[m]]))}"
+  let ?f = "\<Union>?H"
+  have "dom ?f = \<nat>"
+  proof (rule ext, rule iffI)
+    fix z
+    assume "z \<in> dom ?f"
+    thus "z \<in> \<nat>" unfolding dom_def by auto
+  next
+    fix z
+    assume "z \<in> \<nat>"
+    thus "z \<in> dom ?f"
+    apply-
+    apply (rule dom_unionI)
+  apply auto
 end
