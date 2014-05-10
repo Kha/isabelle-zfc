@@ -66,8 +66,9 @@ lemma eval_iff[simp]: "\<langle>\<K>,g\<rangle> \<Turnstile> f1 \<longleftrighta
 lemma eval_diamond[simp]: "\<langle>\<K>,g\<rangle> \<Turnstile> \<diamond>f \<longleftrightarrow> (\<exists>h. (g,h) \<in> R' \<K> \<and> \<langle>\<K>,h\<rangle> \<Turnstile> f)" by (simp add:Diamond_def)
 lemma eval_true[simp]: "\<langle>\<K>,g\<rangle> \<Turnstile> True\<^sub>M" by (simp add:Mod_True_def)
 
-lemmas eval_impliesI = eval_implies[THEN iffD2, rule_format]
-lemmas eval_boxD = eval.simps(4)[THEN iffD1, rule_format]
+lemmas eval_impliesI[intro] = eval_implies[THEN iffD2, rule_format]
+lemmas eval_boxI[intro] = eval.simps(4)[THEN iffD2, rule_format]
+lemmas eval_boxD[dest] = eval.simps(4)[THEN iffD1, rule_format]
 
 abbreviation global_eval :: "[('g, 'a) KripkeStruct, 'a PModFml] \<Rightarrow> bool" ("_ \<Turnstile> _" [51,51] 50) where
   "\<K> \<Turnstile> F \<equiv> (\<forall>g \<in> G' \<K>. \<langle>\<K>,g\<rangle> \<Turnstile> F)"
@@ -88,6 +89,11 @@ subsection {* Classes of Kripke Frames *}
 type_synonym 'g KripkeClass = "'g KripkeFrame set"
 abbreviation K :: "'g KripkeClass" where "K \<equiv> UNIV"
 abbreviation "T \<equiv> {Fr \<in> K. refl_on (G Fr) (R Fr)}"
+abbreviation "S4 \<equiv> {Fr \<in> T. trans (R Fr)}"
+abbreviation "S5 \<equiv> {Fr \<in> S4. sym (R Fr)}"
+abbreviation "K4 \<equiv> {Fr \<in> K. trans (R Fr)}"
+abbreviation "B \<equiv> {Fr \<in> K4. sym (R Fr)}"
+abbreviation "D \<equiv> {Fr \<in> K. Domain (R Fr) = G Fr}"
 
 lemma T[simp]: "Fr \<in> T \<longleftrightarrow> (\<forall>g \<in> G Fr. (g,g) \<in> R Fr)" using Frame_wf[of Fr] by (auto simp:refl_on_def)
 
