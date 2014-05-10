@@ -2,6 +2,8 @@ theory ZFC
 imports HOL
 begin
 
+section {* ZFC *}
+
 typedecl set
 
 axiomatization
@@ -24,7 +26,7 @@ notation (xsymbols)
   not_member  ("op \<notin>") and
   not_member  ("(_/ \<notin> _)" [51, 51] 50)
 
-section "Zermelo-Fraenkel Axiom System"
+subsection "Zermelo-Fraenkel Axiom System"
 
 axiomatization where
   extensionality: "\<forall>z. (z \<in> x \<longleftrightarrow> z \<in> y) \<Longrightarrow> x = y" and
@@ -121,7 +123,7 @@ lemma Pow[simp]: "z \<in> Pow x \<longleftrightarrow> (\<forall>u. u \<in> z \<l
 by (rule exAxiomD2[of "\<lambda>z. \<forall>u. u \<in> z \<longrightarrow> u \<in> x", simplified, folded Pow_def]) (rule power_set)
 
 (*
-section "Class Terms"
+subsection "Class Terms"
 
 type_synonym class_term = "set \<Rightarrow> bool"
 
@@ -130,11 +132,11 @@ syntax
 translations
   "{x. P}" == "(%x. P)"
 
-section "Some Abbreviations For Sets"
+subsection "Some Abbreviations For Sets"
 
 *)
 
-section "Lemmas on Unions and Intersections"
+subsection "Lemmas on Unions and Intersubsections"
 
 definition union :: "set \<Rightarrow> set \<Rightarrow> set" (infixl "\<union>" 65) where
   "union x y \<equiv> sum (pair x y)"
@@ -178,7 +180,7 @@ definition Union :: "set \<Rightarrow> set" ("\<Union>_" [1000] 999) where
 lemma Union[simp]: "z \<in> \<Union>a \<longleftrightarrow> (\<exists>u. z \<in> u \<and> u \<in> a)"
 by (rule exAxiomD2[of "\<lambda>z. \<exists>u. z \<in> u \<and> u \<in> a", simplified, folded Union_def]) (rule sum_set)
 
-section {* Ordered Pairs *}
+subsection {* Ordered Pairs *}
 
 definition ordered_pair :: "set \<Rightarrow> set \<Rightarrow> set" ("\<langle>_,_\<rangle>") where
   "\<langle>a,b\<rangle> \<equiv> {{a}, {a,b}}"
@@ -239,7 +241,7 @@ proof
   qed (auto simp:ordered_pair_def)
 qed simp
 
-section {* Relations and Functions *}
+subsection {* Relations and Functions *}
 
 definition "rel r \<equiv> \<forall>x. x \<in> r \<longrightarrow> (\<exists>x\<^sub>1 x\<^sub>2. x = \<langle>x\<^sub>1,x\<^sub>2\<rangle>)"
 definition "rel'' r a b \<equiv> rel r \<and> (\<forall>x\<^sub>1 x\<^sub>2. \<langle>x\<^sub>1, x\<^sub>2\<rangle> \<in> r \<longrightarrow> x\<^sub>1 \<in> a \<and> x\<^sub>2 \<in> b)"
@@ -247,7 +249,7 @@ definition "rel' r s \<equiv> rel'' r s s"
 definition "func r \<equiv> rel r \<and> (\<forall>x y\<^sub>1 y\<^sub>2. \<langle>x,y\<^sub>1\<rangle> \<in> r \<and> \<langle>x,y\<^sub>2\<rangle> \<in> r \<longrightarrow> y\<^sub>1 = y\<^sub>2)"
 definition "func' f a b \<equiv> func f \<and> rel'' f a b"
 
-subsection {* Existence Proofs *}
+subsubsection {* Existence Proofs *}
 
 definition "singletons a \<equiv> {b \<in> Pow a. \<exists>x. b = {x}}"
 
@@ -291,7 +293,7 @@ lemma funcs[simp]: "f \<in> funcs a b \<longleftrightarrow> func' f a b"
 by (auto simp:funcs_def func'_def func_def)
 
 
-section {* Natural Numbers *}
+subsection {* Natural Numbers *}
 
 
 definition succ :: "set \<Rightarrow> set" ("_\<^sup>+" [1000] 999) where
@@ -323,7 +325,7 @@ lemma nats: "n \<in> \<nat> \<longleftrightarrow> (\<forall>a. Ded a \<longright
 unfolding nats_def
 by (rule Intersect) (rule icanhazded)
 
-subsection {* Peano's Axioms *}
+subsubsection {* Peano's Axioms *}
 
 lemma ax_zero[simp]: "0 \<in> \<nat>"
 by (simp add:nats Ded_def)
@@ -380,7 +382,7 @@ by (auto simp add:subseteq_def)
 lemma ax_induct: "\<lbrakk>0 \<in> x; \<And>y. y \<in> x \<Longrightarrow> y\<^sup>+ \<in> x\<rbrakk> \<Longrightarrow> \<nat> \<subseteq> x"
 by (simp add:subseteq_def nats Ded_def)
 
-subsection {* Set Theoretic Properties of \<nat> *}
+subsubsection {* Set  Properties of @{term \<nat>} *}
 
 lemma[simp]: "0 \<in> 0\<^sup>+"
 by (simp add:succ_def)
@@ -412,7 +414,7 @@ proof-
   thus "P n" by simp
 qed
 
-subsection {* Transitive Sets *}
+subsubsection {* Transitive Sets *}
 
 definition "trans a \<equiv> \<forall>x. x \<in> a \<longrightarrow> x \<subseteq> a"
 
@@ -467,7 +469,7 @@ proof (rule, rule)
   by (rule nat_induct) (simp_all add:zero_def succ_def)
 qed
 
-subsection {* The order relation on \<nat> *}
+subsubsection {* The order relation on @{term \<nat>} *}
 
 definition "trans_rel r \<equiv> \<forall>x y z. \<langle>x,y\<rangle> \<in> r \<and> \<langle>y,z\<rangle> \<in> r \<longrightarrow> \<langle>x,z\<rangle> \<in> r"
 
@@ -500,7 +502,7 @@ using assms(3) proof (induct m rule:nat_induct)
   qed
 qed simp
 
-subsection {* Set Theoretic Properties of \<nat> (II) *}
+subsubsection {* Set  Properties of @{term \<nat>} (II) *}
 
 definition less ("_ < _" [51, 51] 50) where "n < m \<equiv> n \<in> m"
 
@@ -515,7 +517,8 @@ unfolding less_def
 by (rule extensionality) (auto intro:trans_nat)
 
 
-subsection {* The Recursion Theorem *}
+(*
+subsubsection {* The Recursion Theorem *}
 
 definition "dom f \<equiv> {x \<in> \<Union>f . \<exists>y. \<langle>x,y\<rangle> \<in> f}"
 
@@ -591,4 +594,6 @@ proof (rule ex_ex1I)
     apply-
     apply (rule dom_unionI)
   apply auto
+end *)
+
 end
